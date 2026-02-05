@@ -1,9 +1,12 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import http from "node:http";
 import { connect } from "./services/db";
 
 import authRoutes from "./routes/auth.routes";
+import { logger } from "./helpers";
+import { initSocket } from "./services/socket";
 
 dotenv.config({ quiet: true });
 
@@ -19,8 +22,11 @@ app.get("/api", (_req: Request, res: Response) => {
   res.status(200).send("API Working");
 });
 
+const server = http.createServer(app);
+initSocket(server);
+
 connect().then(() => {
-  app.listen(PORT || 5000, () => {
-    console.log(`Server is running at http://localhost:${PORT}`);
+  server.listen(PORT || 5000, () => {
+    logger(`Server is running at http://localhost:${PORT}`);
   });
 });

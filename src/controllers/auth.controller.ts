@@ -42,15 +42,14 @@ export const login = async (
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email }).select("password");
-
+    const user = await User.findOne({ email }).select("+password");
     if (!user) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid credentials" });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password!);
     if (!isMatch) {
       return res
         .status(400)
@@ -61,9 +60,15 @@ export const login = async (
       expiresIn: process.env.JWT_ExpiresIn || "7d",
     } as SignOptions);
 
-    return res
-      .status(200)
-      .json({ success: true, message: "Login successfully", token });
+    const userObj = user.toObject();
+    delete userObj.password;
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successfully",
+      token,
+      user: userObj,
+    });
   } catch (error) {
     next(error);
   }

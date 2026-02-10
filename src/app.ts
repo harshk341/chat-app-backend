@@ -5,6 +5,7 @@ import http from "node:http";
 import { connect } from "./services/db";
 
 import authRoutes from "./routes/auth.routes";
+import messageRoutes from "./routes/message.routes";
 import { logger } from "./helpers";
 import { initSocket } from "./services/socket";
 
@@ -17,6 +18,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/messages", messageRoutes);
 
 app.get("/api", (_req: Request, res: Response) => {
   res.status(200).send("API Working");

@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import jwt, { SignOptions } from "jsonwebtoken";
 import User from "../models/User";
 import { AuthenticatedRequest } from "../globalTypes";
+import { getIO } from "../services/socket";
 
 interface RegisterUserReqBody {
   name: string;
@@ -28,6 +29,8 @@ export const register = async (
     const hashpassword = await bcrypt.hash(password, 10);
 
     await User.create({ name, email, password: hashpassword });
+    const io = getIO();
+    io.emit("new-user");
     return res.status(201).json({ success: true, message: "User created" });
   } catch (error) {
     next(error);

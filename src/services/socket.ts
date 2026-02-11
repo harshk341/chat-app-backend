@@ -1,11 +1,13 @@
 import { Server } from "socket.io";
 import { logger } from "../helpers";
 import Message from "../models/Message";
+import { Server as HttpServer } from "node:http";
 
 const onlineUser = new Map<string, string>();
+let io: Server;
 
-export const initSocket = (server: any) => {
-  const io = new Server(server, { cors: { origin: "*" } });
+export const initSocket = (server: HttpServer) => {
+  io = new Server(server, { cors: { origin: "*" } });
 
   logger("✅socket setup");
 
@@ -39,5 +41,20 @@ export const initSocket = (server: any) => {
 
       socket.emit("receiver-message", message);
     });
+
+    socket.on("typing", ({ sender, receiver }) => {
+      const receiverSocketId = onlineUser.get(receiver);
+
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("user-typing", sender);
+      }
+    });
   });
+};
+
+export const getIO = () => {
+  if (!io) {
+    throw new Error("Socket.io not initialized");
+  }
+  return io;
 };

@@ -31,6 +31,6 @@ initSocket(server);
 
 connect().then(() => {
   server.listen(PORT || 5000, () => {
-    logger(`Server is running at http://localhost:${PORT}`);
+    logger(`Server is running`);
   });
 });

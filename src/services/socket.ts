@@ -12,16 +12,12 @@ export const initSocket = (server: HttpServer) => {
   logger("✅socket setup");
 
   io.on("connection", (socket) => {
-    logger("User connected: ", socket.id, new Date().toLocaleTimeString());
-
     socket.on("join", (userId: string) => {
       onlineUser.set(userId, socket.id);
       io.emit("online-users", Array.from(onlineUser.keys()));
     });
 
     socket.on("disconnect", () => {
-      logger("User disconnected: ", socket.id, new Date().toLocaleTimeString());
-
       for (const [key, value] of onlineUser.entries()) {
         if (value === socket.id) {
           onlineUser.delete(key);

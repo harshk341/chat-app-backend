@@ -3,7 +3,8 @@ import { logger } from "../helpers";
 import Message from "../models/Message";
 import { Server as HttpServer } from "node:http";
 
-const onlineUser = new Map<string, string>();
+const onlineUser = new Map<string, Set<string>>();
+const socketToUser = new Map<string, string>();
 let io: Server;
 
 export const initSocket = (server: HttpServer) => {
@@ -13,36 +14,55 @@ export const initSocket = (server: HttpServer) => {
 
   io.on("connection", (socket) => {
     socket.on("join", (userId: string) => {
-      onlineUser.set(userId, socket.id);
+      if (!onlineUser.has(userId)) {
+        onlineUser.set(userId, new Set());
+      }
+
+      onlineUser.get(userId)!.add(socket.id);
+      socketToUser.set(socket.id, userId);
+
       io.emit("online-users", Array.from(onlineUser.keys()));
     });
 
     socket.on("disconnect", () => {
-      for (const [key, value] of onlineUser.entries()) {
-        if (value === socket.id) {
-          onlineUser.delete(key);
+      const userId = socketToUser.get(socket.id);
+      if (!userId) return;
+
+      const sockets = onlineUser.get(userId);
+
+      if (sockets) {
+        sockets.delete(socket.id);
+
+        if (sockets.size === 0) {
+          onlineUser.delete(userId);
         }
       }
+
+      socketToUser.delete(socket.id);
+
       io.emit("online-users", Array.from(onlineUser.keys()));
     });
 
     socket.on("send-message", async ({ sender, receiver, content }) => {
       const message = await Message.create({ sender, receiver, content });
 
-      const receiverSocketId = onlineUser.get(receiver);
+      const receiverSocketIds = onlineUser.get(receiver);
+      const senderSocketIds = onlineUser.get(sender);
 
-      if (receiverSocketId) {
-        io.to(receiverSocketId).emit("receiver-message", message);
+      if (receiverSocketIds) {
+        io.to([...receiverSocketIds]).emit("receiver-message", message);
       }
 
-      socket.emit("receiver-message", message);
+      if (senderSocketIds) {
+        io.to([...senderSocketIds]).emit("receiver-message", message);
+      }
     });
 
     socket.on("typing", ({ sender, receiver }) => {
-      const receiverSocketId = onlineUser.get(receiver);
+      const receiverSocketIds = onlineUser.get(receiver);
 
-      if (receiverSocketId) {
-        io.to(receiverSocketId).emit("user-typing", sender);
+      if (receiverSocketIds) {
+        io.to([...receiverSocketIds]).emit("user-typing", sender);
       }
     });
   });
